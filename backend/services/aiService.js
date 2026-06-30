@@ -1,14 +1,27 @@
-const models = [
-  { slug: 'gemini-2.5', name: 'Gemini 2.5', color: '#10B981' },
-  { slug: 'groq-llama', name: 'Groq Llama', color: '#14B8A6' },
-  { slug: 'cohere-command-r', name: 'Cohere Command R+', color: '#EC4899' },
-  { slug: 'deepseek-v3', name: 'DeepSeek V3', color: '#A78BFA' },
-  { slug: 'gpt-4.1', name: 'GPT-4.1', color: '#8B5CF6' },
-  { slug: 'claude-3.7', name: 'Claude 3.7', color: '#F59E0B' },
-  { slug: 'mistral-large', name: 'Mistral Large', color: '#F472B6' },
-  { slug: 'perplexity-sonar', name: 'Perplexity Sonar', color: '#FB923C' },
-  { slug: 'grok-2', name: 'Grok 2', color: '#22C55E' },
+const ALL_PROVIDERS = [
+  { name: 'Gemini 2.5', key: 'GEMINI_API_KEY', slug: 'gemini-2.5', color: '#10B981', provider: 'Google Gemini' },
+  { name: 'Llama 3.3', key: 'GROQ_API_KEY', slug: 'groq-llama', color: '#14B8A6', provider: 'Groq' },
+  { name: 'Cohere Command R+', key: 'COHERE_API_KEY', slug: 'cohere-command-r', color: '#EC4899', provider: 'Cohere' },
+  { name: 'DeepSeek V3', key: 'DEEPSEEK_API_KEY', slug: 'deepseek-v3', color: '#A78BFA', provider: 'DeepSeek' },
+  { name: 'GPT-4.1', key: 'OPENAI_API_KEY', slug: 'gpt-4.1', color: '#8B5CF6', provider: 'OpenAI' },
+  { name: 'Claude 3.7', key: 'ANTHROPIC_API_KEY', slug: 'claude-3.7', color: '#F59E0B', provider: 'Anthropic' },
+  { name: 'Mistral Large', key: 'MISTRAL_API_KEY', slug: 'mistral-large', color: '#F472B6', provider: 'Mistral' },
+  { name: 'Perplexity Sonar', key: 'PERPLEXITY_API_KEY', slug: 'perplexity-sonar', color: '#FB923C', provider: 'Perplexity' },
+  { name: 'Grok 2', key: 'GROK_API_KEY', slug: 'grok-2', color: '#22C55E', provider: 'xAI Grok' },
 ];
+
+function hasKey(envVar) {
+  return typeof process.env[envVar] === 'string' && process.env[envVar].trim() !== '';
+}
+
+const AI_PROVIDERS = ALL_PROVIDERS.filter((provider) => hasKey(provider.key));
+const models = ALL_PROVIDERS.filter((provider) => hasKey(provider.key)).map((provider) => ({
+  slug: provider.slug,
+  name: provider.name,
+  color: provider.color,
+  provider: provider.provider,
+  key: provider.key,
+}));
 
 function buildConversationMessages(messages = []) {
   const validMessages = messages.filter((entry) => entry?.role && entry?.content);
@@ -197,20 +210,20 @@ function resolveApiKey(keyEnv) {
 }
 
 export async function generateModelReply(modelSlug, messages = []) {
-  const model = models.find((entry) => entry.slug === modelSlug) || models[0];
-  const config = getProviderConfig(model.slug);
+  const configuredModel = models.find((entry) => entry.slug === modelSlug) || models[0];
+  const config = getProviderConfig(configuredModel?.slug || modelSlug);
   const conversation = buildConversationMessages(messages);
 
   if (!config) {
-    throw new Error(`Unsupported model: ${model.slug}`);
+    throw new Error(`Unsupported model: ${configuredModel?.slug || modelSlug}`);
   }
 
   const apiKey = resolveApiKey(config.keyEnv);
   if (!apiKey) {
     return {
-      reply: `Live ${model.name} responses are ready, but no API key is configured for ${config.provider}.`,
-      modelUsed: model.name,
-      modelSlug: model.slug,
+      reply: `Live ${configuredModel?.name || modelSlug} responses are ready, but no API key is configured for ${config.provider}.`,
+      modelUsed: configuredModel?.name || modelSlug,
+      modelSlug: configuredModel?.slug || modelSlug,
       provider: config.provider,
       configured: false,
     };
@@ -242,16 +255,16 @@ export async function generateModelReply(modelSlug, messages = []) {
 
     return {
       reply,
-      modelUsed: model.name,
-      modelSlug: model.slug,
+      modelUsed: configuredModel?.name || modelSlug,
+      modelSlug: configuredModel?.slug || modelSlug,
       provider: config.provider,
       configured: true,
     };
   } catch (error) {
     return {
       reply: `RYTA HUB could not reach ${config.provider} right now. ${error.message}`,
-      modelUsed: model.name,
-      modelSlug: model.slug,
+      modelUsed: configuredModel?.name || modelSlug,
+      modelSlug: configuredModel?.slug || modelSlug,
       provider: config.provider,
       configured: true,
       error: error.message,
@@ -259,4 +272,4 @@ export async function generateModelReply(modelSlug, messages = []) {
   }
 }
 
-export { models };
+export { AI_PROVIDERS, hasKey, models };

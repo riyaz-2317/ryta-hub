@@ -9,3 +9,8 @@ export const sendChat = async (messages, preferredIndex = 0) => {
   });
   return res.data;
 };
+
+export const fetchConfiguredModels = async () => {
+  const res = await axios.get(`${BASE_URL}/api/models`);
+  return res.data.models || [];
+};

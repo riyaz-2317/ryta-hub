@@ -1,7 +1,8 @@
+import { memo } from 'react';
 import { motion } from 'framer-motion';
 import { FaCopy, FaThumbsUp, FaThumbsDown } from 'react-icons/fa';
 
-export default function MessageBubble({ message, isUser, aiName, aiColor, timestamp }) {
+function MessageBubble({ message, isUser, aiName, aiColor, timestamp }) {
   const copyText = async () => {
     await navigator.clipboard.writeText(message.content);
   };
@@ -38,3 +39,5 @@ export default function MessageBubble({ message, isUser, aiName, aiColor, timest
     </motion.div>
   );
 }
+
+export default memo(MessageBubble);

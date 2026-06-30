@@ -3,7 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import { generateModelReply, models } from './services/aiService.js';
+import { AI_PROVIDERS, generateModelReply, models } from './services/aiService.js';
 
 dotenv.config();
 
@@ -17,6 +17,18 @@ app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 200 }));
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, message: 'RYTA HUB backend is running' });
+});
+
+app.get('/api/models', (_req, res) => {
+  res.json({
+    models: AI_PROVIDERS.map((provider) => ({
+      name: provider.name,
+      slug: provider.slug,
+      color: provider.color,
+      provider: provider.provider,
+      key: provider.key,
+    })),
+  });
 });
 
 app.post('/api/chat', async (req, res) => {

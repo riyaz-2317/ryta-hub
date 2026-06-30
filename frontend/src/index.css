@@ -5,6 +5,8 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { background: #0A0A0F; color: white; font-family: 'Inter', sans-serif; }
+img { content-visibility: auto; }
+* { will-change: transform; }
 
 .glass {
   background: rgba(255, 255, 255, 0.05);

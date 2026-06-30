@@ -4,7 +4,7 @@ import * as THREE from 'three';
 
 function Particles({ chatting = false }) {
   const pointsRef = useRef();
-  const count = 1800;
+  const count = 800;
 
   const positions = useMemo(() => {
     const pos = new Float32Array(count * 3);

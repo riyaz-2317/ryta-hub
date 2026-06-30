@@ -1,8 +1,19 @@
+import { memo, useMemo } from 'react';
 import { FaPlus, FaSignOutAlt, FaRobot } from 'react-icons/fa';
 
 const groupTitles = ['Today', 'Yesterday', 'Last 7 Days', 'Older'];
 
-export default function Sidebar({ user, chats, activeChat, onNewChat, onSelectChat, onLogout }) {
+function Sidebar({ user, chats, activeChat, onNewChat, onSelectChat, onLogout, availableModels = [] }) {
+  const groupedChats = useMemo(() => {
+    const groups = Object.fromEntries(groupTitles.map((title) => [title, []]));
+    chats.forEach((chat) => {
+      const group = chat.group || 'Older';
+      if (!groups[group]) groups[group] = [];
+      groups[group].push(chat);
+    });
+    return groupTitles.filter((group) => groups[group]?.length).map((group) => ({ name: group, items: groups[group] }));
+  }, [chats]);
+
   return (
     <aside className="glass flex h-screen w-[280px] flex-col border-r border-white/10 p-5">
       <div className="flex items-center justify-between">
@@ -15,7 +26,7 @@ export default function Sidebar({ user, chats, activeChat, onNewChat, onSelectCh
 
       <div className="mt-6 rounded-3xl border border-purple-400/20 bg-white/5 p-4">
         <div className="flex items-center gap-3">
-          <img src={user.photoURL} alt="avatar" className="h-12 w-12 rounded-full border-2 border-purple-400/40" />
+          <img loading="lazy" src={user.photoURL} alt="avatar" className="h-12 w-12 rounded-full border-2 border-purple-400/40" />
           <div>
             <p className="text-sm font-semibold text-white">{user.displayName}</p>
             <p className="text-xs text-gray-400">{user.email}</p>
@@ -31,14 +42,14 @@ export default function Sidebar({ user, chats, activeChat, onNewChat, onSelectCh
       </button>
 
       <div className="mt-6 flex-1 overflow-auto">
-        {groupTitles.map((group) => {
-          const items = chats.filter((chat) => chat.group === group);
-          if (!items.length) return null;
-          return (
-            <div key={group} className="mb-4">
-              <p className="mb-2 text-[10px] uppercase tracking-[0.3em] text-gray-500">{group}</p>
+        {groupedChats.length === 0 ? (
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-3 text-sm text-gray-400">No saved chats yet.</div>
+        ) : (
+          groupedChats.map((group) => (
+            <div key={group.name} className="mb-4">
+              <p className="mb-2 text-[10px] uppercase tracking-[0.3em] text-gray-500">{group.name}</p>
               <div className="space-y-2">
-                {items.map((chat) => (
+                {group.items.map((chat) => (
                   <button
                     key={chat.id}
                     onClick={() => onSelectChat(chat)}
@@ -46,17 +57,17 @@ export default function Sidebar({ user, chats, activeChat, onNewChat, onSelectCh
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="truncate text-sm text-white">{chat.preview}</p>
-                        <p className="mt-1 text-xs text-gray-400">{chat.date}</p>
+                        <p className="truncate text-sm text-white">{chat.preview || 'New conversation'}</p>
+                        <p className="mt-1 text-xs text-gray-400">{chat.date ? new Date(chat.date).toLocaleString() : 'Just now'}</p>
                       </div>
-                      <div className="rounded-full border border-white/10 bg-[#13131A] px-2 py-1 text-[10px] text-purple-200">{chat.model}</div>
+                      <div className="rounded-full border border-white/10 bg-[#13131A] px-2 py-1 text-[10px] text-purple-200">{chat.model || 'RYTA HUB'}</div>
                     </div>
                   </button>
                 ))}
               </div>
             </div>
-          );
-        })}
+          ))
+        )}
       </div>
 
       <div className="mt-4 rounded-3xl border border-white/10 bg-white/5 p-4">
@@ -64,10 +75,12 @@ export default function Sidebar({ user, chats, activeChat, onNewChat, onSelectCh
           <FaRobot /> Model Status
         </div>
         <div className="space-y-2 text-sm text-gray-300">
-          {['GPT-4.1', 'Claude 3.7', 'Gemini 2.5', 'Llama 3.3'].map((name, index) => (
-            <div key={name} className="flex items-center justify-between">
-              <span>{name}</span>
-              <span className={`h-2.5 w-2.5 rounded-full ${index % 2 ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+          {availableModels.length === 0 ? (
+            <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-gray-400">No models available yet.</div>
+          ) : availableModels.map((model) => (
+            <div key={model.name} className="flex items-center justify-between">
+              <span>{model.name}</span>
+              <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
             </div>
           ))}
         </div>
@@ -79,3 +92,5 @@ export default function Sidebar({ user, chats, activeChat, onNewChat, onSelectCh
     </aside>
   );
 }
+
+export default memo(Sidebar);

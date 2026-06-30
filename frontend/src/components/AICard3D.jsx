@@ -1,7 +1,8 @@
+import { memo } from 'react';
 import { motion } from 'framer-motion';
 import { FaRobot } from 'react-icons/fa';
 
-export default function AICard3D({ ai }) {
+function AICard3D({ ai }) {
   return (
     <motion.div
       whileHover={{ rotateY: 180, scale: 1.03 }}
@@ -34,3 +35,5 @@ export default function AICard3D({ ai }) {
     </motion.div>
   );
 }
+
+export default memo(AICard3D);

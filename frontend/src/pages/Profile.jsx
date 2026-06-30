@@ -150,6 +150,7 @@ export default function Profile({ userProp }) {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDisconnectModal, setShowDisconnectModal] = useState(false);
   const [showClearModal, setShowClearModal] = useState(false);
+  const [photoError, setPhotoError] = useState('');
   const fileInputRef = useRef(null);
 
   const memberSince = useMemo(() => {
@@ -259,50 +260,70 @@ export default function Profile({ userProp }) {
     }
   };
 
+  const resolvePhotoUrl = () => {
+    const customPhoto = localStorage.getItem('customPhotoURL');
+    if (customPhoto) return customPhoto;
+    return photoURL || user?.photoURL || '';
+  };
+
   const handlePhotoAction = (action) => {
     if (action === 'upload') {
       fileInputRef.current?.click();
     } else if (action === 'google') {
+      localStorage.removeItem('customPhotoURL');
       setPhotoURL(user?.photoURL || '');
-      setShowUploadMenu(false);
-    } else if (action === 'remove') {
-      setPhotoURL('');
-      setShowUploadMenu(false);
+      setPhotoError('');
+    } else if (action === 'cancel') {
+      setPhotoError('');
     }
     setShowUploadMenu(false);
   };
 
-  const handleFileUpload = (event) => {
+  const handleFileUpload = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    const previewUrl = URL.createObjectURL(file);
-    setPhotoURL(previewUrl);
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowedTypes.includes(file.type)) {
+      setPhotoError('Please choose a JPG, PNG, WEBP, or GIF image.');
+      event.target.value = '';
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      setPhotoError('Image must be smaller than 2MB.');
+      event.target.value = '';
+      return;
+    }
+
+    setPhotoError('');
     setIsUploading(true);
     setUploadProgress(0);
 
-    const timer = setInterval(() => {
-      setUploadProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(timer);
-          setIsUploading(false);
-          setShowUploadMenu(false);
-          const updated = {
-            ...user,
-            uid: user?.uid || auth.currentUser?.uid,
-            photoURL: previewUrl,
-          };
-          setUser(updated);
-          localStorage.setItem('user', JSON.stringify(updated));
-          if (updated.uid) {
-            persistProfileToFirestore(updated.uid, updated, settings);
-          }
-          return 100;
-        }
-        return prev + Math.random() * 30;
-      });
-    }, 150);
-
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result;
+      localStorage.setItem('customPhotoURL', base64);
+      setPhotoURL(base64);
+      setUploadProgress(100);
+      setIsUploading(false);
+      setShowUploadMenu(false);
+      const updated = {
+        ...user,
+        uid: user?.uid || auth.currentUser?.uid,
+        photoURL: base64,
+      };
+      setUser(updated);
+      localStorage.setItem('user', JSON.stringify(updated));
+      if (updated.uid) {
+        persistProfileToFirestore(updated.uid, updated, settings);
+      }
+    };
+    reader.onerror = () => {
+      setPhotoError('The selected image could not be processed.');
+      setIsUploading(false);
+    };
+    reader.readAsDataURL(file);
     event.target.value = '';
   };
 
@@ -439,6 +460,7 @@ export default function Profile({ userProp }) {
                   {/* Profile Picture Button */}
                   <motion.button
                     whileTap={{ scale: 0.98 }}
+                    type="button"
                     onClick={() => setShowUploadMenu((prev) => !prev)}
                     className="group relative z-10 flex h-48 w-48 items-center justify-center overflow-hidden rounded-full border-4 border-purple-400/60 shadow-[0_0_60px_rgba(124,58,237,0.5)]"
                   >
@@ -463,9 +485,10 @@ export default function Profile({ userProp }) {
                       }}
                       className="absolute inset-0 rounded-full"
                     >
-                      {photoURL ? (
+                      {resolvePhotoUrl() ? (
                         <img
-                          src={photoURL}
+                          loading="lazy"
+                          src={resolvePhotoUrl()}
                           alt="profile"
                           className="h-full w-full rounded-full object-cover"
                         />
@@ -488,6 +511,7 @@ export default function Profile({ userProp }) {
                       >
                         <motion.button
                           whileHover={{ x: 4 }}
+                          type="button"
                           onClick={() => handlePhotoAction('upload')}
                           className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm text-gray-200 transition hover:bg-white/10"
                         >
@@ -495,6 +519,7 @@ export default function Profile({ userProp }) {
                         </motion.button>
                         <motion.button
                           whileHover={{ x: 4 }}
+                          type="button"
                           onClick={() => handlePhotoAction('google')}
                           className="mt-2 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm text-gray-200 transition hover:bg-white/10"
                         >
@@ -502,7 +527,21 @@ export default function Profile({ userProp }) {
                         </motion.button>
                         <motion.button
                           whileHover={{ x: 4 }}
-                          onClick={() => handlePhotoAction('remove')}
+                          type="button"
+                          onClick={() => handlePhotoAction('cancel')}
+                          className="mt-2 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm text-gray-300 transition hover:bg-white/10"
+                        >
+                          <FaTimesCircle /> Cancel
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ x: 4 }}
+                          type="button"
+                          onClick={() => {
+                            localStorage.removeItem('customPhotoURL');
+                            setPhotoURL('');
+                            setPhotoError('');
+                            setShowUploadMenu(false);
+                          }}
                           className="mt-2 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm text-red-300 transition hover:bg-red-500/10"
                         >
                           <FaUserSlash /> Remove Photo
